@@ -66,19 +66,72 @@ export const getFavoriteTours = async (req, res) => {
         }).lean();
 
         const tours = [];
-        for (const tourId of favoriteTours.tourIds) {
-            const tour = await Tour.findOne({ _id: tourId });
-            const getObjectParams = {
-                Bucket: bucketName,
-                Key: tour.imageName,
-            };
-            const command = new GetObjectCommand(getObjectParams);
-            const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
-            tour.imageUrl = url;
-            tours.push(tour);
+        if (favoriteTours) {
+            for (const tourId of favoriteTours.tourIds) {
+                const tour = await Tour.findOne({ _id: tourId }).lean();
+                const getObjectParams = {
+                    Bucket: bucketName,
+                    Key: tour.imageName,
+                };
+                const command = new GetObjectCommand(getObjectParams);
+                const url = await getSignedUrl(s3, command, {
+                    expiresIn: 3600,
+                });
+                tour.imageUrl = url;
+                tours.push(tour);
+            }
+        }
+        res.status(200).json(tours);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const addToFavorites = async (req, res) => {
+    try {
+        const tourId = req.body.tourId;
+        const userId = req.user.id;
+
+        const favoriteTours = await FavoriteTour.findOne({ user: userId });
+        if (!favoriteTours) {
+            await FavoriteTour.create({
+                user: userId,
+                tourIds: [tourId],
+            });
+        } else {
+            if (!favoriteTours.tourIds.includes(tourId)) {
+                favoriteTours.tourIds.push(tourId);
+                await favoriteTours.save();
+            }
         }
 
-        res.status(200).json(tours);
+        res.status(200).json({});
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const removeFromFavorites = async (req, res) => {
+    try {
+        const tourId = req.body.tourId;
+        const userId = req.user.id;
+
+        const favoriteTours = await FavoriteTour.findOne({
+            user: userId,
+        }).lean();
+        if (favoriteTours) {
+            const newFavoriteTourIds = favoriteTours.tourIds.filter(
+                (tour) => tour !== tourId
+            );
+            if (newFavoriteTourIds.length === 0) {
+                await FavoriteTour.deleteOne({ _id: favoriteTours._id });
+            } else {
+                favoriteTours.tourIds = newFavoriteTourIds;
+                await favoriteTours.save();
+            }
+        }
+
+        res.status(200).json({});
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -90,19 +143,23 @@ export const getPurchases = async (req, res) => {
 
         const purchases = await Purchase.findOne({ user: userId }).lean();
         const tours = [];
-        for (const tourId of purchases.tourIds) {
-            const tour = await Tour.find({ _id: tourId });
-            const getObjectParams = {
-                Bucket: bucketName,
-                Key: tour.imageName,
-            };
-            const command = new GetObjectCommand(getObjectParams);
-            const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
-            tour.imageUrl = url;
-            tours.push(tour);
+        if (purchases) {
+            for (const tourId of purchases.tourIds) {
+                const tour = await Tour.findOne({ _id: tourId }).lean();
+                const getObjectParams = {
+                    Bucket: bucketName,
+                    Key: tour.imageName,
+                };
+                const command = new GetObjectCommand(getObjectParams);
+                const url = await getSignedUrl(s3, command, {
+                    expiresIn: 3600,
+                });
+                tour.imageUrl = url;
+                tours.push(tour);
+            }
         }
 
-        res.status(200).json({ tours, prices: purchases.prices });
+        res.status(200).json(tours);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -124,26 +181,6 @@ export const addToPurchases = async (req, res) => {
             purchase.tourIds.push(tourId);
             purchase.prices.push(price);
             await purchase.save();
-        }
-
-        res.status(200).json({});
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-
-export const addToFavorites = async (req, res) => {
-    try {
-        const tourId = req.body;
-        const userId = req.user.id;
-
-        const favoriteTours = await FavoriteTour.findById(userId);
-        if (!favoriteTours) {
-            const params = { user: userId, tourIds: [tourId] };
-            await FavoriteTour.create(params);
-        } else {
-            favoriteTours.tourIds.push(tourId);
-            await favoriteTours.save();
         }
 
         res.status(200).json({});

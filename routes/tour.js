@@ -6,6 +6,7 @@ import {
     getPurchases,
     addToPurchases,
     addToFavorites,
+    removeFromFavorites,
 } from "../controllers/tourController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 
@@ -18,5 +19,6 @@ router.get("/favoriteTours", authMiddleware, getFavoriteTours);
 router.get("/purchases", authMiddleware, getPurchases);
 router.post("/addToPurchases", authMiddleware, addToPurchases);
 router.post("/addToFavorites", authMiddleware, addToFavorites);
+router.post("/removeFromFavorites", authMiddleware, removeFromFavorites);
 
 export default router;
