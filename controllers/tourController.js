@@ -19,6 +19,18 @@ const s3 = new S3Client({
 
 export const getAllTours = async (req, res) => {
     try {
+        const user = req.user;
+        let favoriteTours = [];
+
+        if (user) {
+            const userFavoriteTours = await FavoriteTour.findOne({
+                user: user.id,
+            });
+            if (userFavoriteTours) {
+                favoriteTours = userFavoriteTours.tourIds;
+            }
+        }
+
         const allTours = await Tour.find().lean();
         for (const tour of allTours) {
             const getObjectParams = {
@@ -30,7 +42,7 @@ export const getAllTours = async (req, res) => {
             tour.imageUrl = url;
         }
 
-        res.status(200).json(allTours);
+        res.status(200).json({ tours: allTours, favoriteTours });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -118,7 +130,7 @@ export const removeFromFavorites = async (req, res) => {
 
         const favoriteTours = await FavoriteTour.findOne({
             user: userId,
-        }).lean();
+        });
         if (favoriteTours) {
             const newFavoriteTourIds = favoriteTours.tourIds.filter(
                 (tour) => tour !== tourId

@@ -9,10 +9,11 @@ import {
     removeFromFavorites,
 } from "../controllers/tourController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
+import toursAuthMiddleware from "../middleware/toursAuthMiddleware.js";
 
 const router = express.Router();
 
-router.get("/allTours", getAllTours);
+router.get("/allTours", toursAuthMiddleware, getAllTours);
 router.post("/toursByLocation", getToursByLocation);
 router.get("/individualTours", authMiddleware, getAllTours);
 router.get("/favoriteTours", authMiddleware, getFavoriteTours);
